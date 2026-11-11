@@ -27,10 +27,13 @@ jobs:
         run: |
           node --check app.js
           node --check config.js
+          node --check login-id.js
+          node --check account-helper.js
+          node --test tests/login-id.test.cjs
       - name: Prepare public website files
         run: |
           mkdir _site
-          cp index.html styles.css app.js config.js .nojekyll _site/
+          cp index.html styles.css app.js config.js login-id.js account-helper.html account-helper.js .nojekyll _site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

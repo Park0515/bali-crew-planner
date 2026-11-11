@@ -54,7 +54,7 @@ window.BALI_CONFIG = {
 };
 ```
 
-5. **Authentication → Users → Add user → Create new user**에서 계정을 직접 등록하고 **Auto Confirm User**를 선택합니다. 사이트에서 `bali01`이라는 아이디를 쓰려면 Supabase의 Email에는 `bali01@bali-crew.example.com`을 입력하고 비밀번호를 지정합니다. 사이트에서는 `bali01`과 비밀번호만 입력합니다. 아이디는 영문·숫자로 시작하는 1~32자의 영문 소문자·숫자·점·밑줄·하이픈이며, 대문자 입력도 소문자로 변환합니다. 이 주소는 내부 식별용이며 메일을 발송하지 않습니다. Invite user는 사용하지 않습니다. 기존 이메일 계정은 전체 주소로도 로그인할 수 있습니다. 인증용 계정을 일반 테이블에 직접 INSERT하지 않습니다.
+5. [계정 등록 도우미](https://park0515.github.io/bali-crew-planner/account-helper.html)에 사용할 아이디를 입력해 Supabase 등록 주소를 복사합니다. **Authentication → Users → Add user → Create new user**의 Email에 해당 주소를 붙여 넣고 비밀번호를 지정한 뒤 **Auto Confirm User**를 선택합니다. 사이트에서는 `성호` 등 원래 아이디와 비밀번호만 입력합니다. 아이디는 한글·영문·숫자로 시작하는 1~32자의 한글·영문·숫자·점·밑줄·하이픈이며, 영문 대문자는 소문자로 변환합니다. 기존 영문 아이디와 전체 이메일 로그인도 유지됩니다. 등록 주소는 내부 식별용이며 메일을 발송하지 않습니다. Invite user는 사용하지 않습니다. 인증용 계정을 일반 테이블에 직접 INSERT하지 않습니다.
 6. **Authentication → Sign In / Providers**의 **Allow new users to sign up**을 끄고 저장합니다. Email 공급자는 켜 두고 Anonymous는 꺼 두어도 됩니다. 이 사이트는 비밀번호 로그인만 사용하며 SMTP나 메일 인증이 필요하지 않습니다.
 7. 사이트에서 등록된 ID/PW로 로그인 → **새 여행 만들기** → 이름·날짜 입력 → 초대 링크 복사 → 다른 7명이 각자의 등록된 ID/PW로 로그인 후 합류합니다. 비밀번호를 잊으면 관리자가 대시보드에서 변경합니다. 비밀번호는 소스나 config.js에 넣지 않습니다.
 
