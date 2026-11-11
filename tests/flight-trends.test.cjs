@@ -57,7 +57,7 @@ test('collector saves eight validated quotes, ignores unverified history, and sk
   const code=`
     import assert from 'node:assert/strict';
     const RealDate=Date;globalThis.Date=class extends RealDate{constructor(...args){super(...(args.length?args:['2026-11-11T03:00:00Z']))}static now(){return new RealDate('2026-11-11T03:00:00Z').getTime()}};
-    process.env.SUPABASE_URL='https://example.supabase.co';process.env.SUPABASE_SECRET_KEY='test-secret';process.env.SERPAPI_API_KEY='test-api';
+    process.env.SUPABASE_URL='https://example.supabase.co';process.env.SUPABASE_SECRET_KEY='sb_secret_test_fixture';process.env.SERPAPI_API_KEY='test-api';
     const members=${JSON.stringify(members)},watches=[],ledger=new Map(),quotes=[];let apiCalls=0;
     globalThis.fetch=async(input,options={})=>{
       const url=new URL(input),method=options.method||'GET',body=options.body?JSON.parse(options.body):null;

@@ -2,15 +2,24 @@ import '../flight-trends.js';
 const F=globalThis.BaliFlights;
 const required=['SUPABASE_URL','SUPABASE_SECRET_KEY','SERPAPI_API_KEY'];
 for(const name of required)if(!process.env[name])throw new Error(`Missing GitHub Secret: ${name}`);
-const root=process.env.SUPABASE_URL.replace(/\/$/,''),secret=process.env.SUPABASE_SECRET_KEY;
+const root=process.env.SUPABASE_URL.trim().replace(/\/$/,''),secret=process.env.SUPABASE_SECRET_KEY.trim();
 if(!root.startsWith('https://'))throw new Error('SUPABASE_URL must use HTTPS');
+if(secret.startsWith('sb_publishable_'))throw new Error('SUPABASE_SECRET_KEY contains a publishable key. Replace it with the project server Secret key (sb_secret_...).');
+if(secret.startsWith('eyJ')){
+  let role;try{role=JSON.parse(Buffer.from(secret.split('.')[1],'base64url').toString()).role;}catch{}
+  if(role!=='service_role')throw new Error('SUPABASE_SECRET_KEY is not a service_role key. Use the project server Secret key (sb_secret_...).');
+}else if(!secret.startsWith('sb_secret_'))throw new Error('SUPABASE_SECRET_KEY has an unexpected format. Copy only the project server Secret key value (sb_secret_...).');
 const now=new Date(),today=F.day(now);
 async function db(path,{method='GET',body,prefer}={}){
   const headers={apikey:secret,'Content-Type':'application/json'};
   if(secret.startsWith('eyJ'))headers.Authorization=`Bearer ${secret}`;
   if(prefer)headers.Prefer=prefer;
   const res=await fetch(root+'/rest/v1/'+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(30000)});
-  if(!res.ok)throw new Error(`Supabase HTTP ${res.status}: ${path.split('?')[0]}`);
+  if(!res.ok){
+    if(res.status===401)throw new Error('Supabase HTTP 401: server key was rejected. Replace SUPABASE_SECRET_KEY with an active Secret key from the same project as SUPABASE_URL.');
+    if(res.status===403)throw new Error(`Supabase HTTP 403: server role has no access to ${path.split('?')[0]}. Confirm the SQL setup and grants.`);
+    throw new Error(`Supabase HTTP ${res.status}: ${path.split('?')[0]}`);
+  }
   const text=await res.text();return text?JSON.parse(text):null;
 }
 async function collect(trip,r,w){
