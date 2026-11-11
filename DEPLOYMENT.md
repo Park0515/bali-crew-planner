@@ -11,6 +11,8 @@
 
 ## 데이터 공유와 가격 수집
 
+이번 발리 여행 한 개만 사용합니다. 기존 프로젝트에서는 Supabase SQL Editor에서 `single-trip.sql`을 한 번 실행합니다. 기존 여행이 한 개면 그대로 연결하며, 여러 개면 변경 없이 중단합니다. 여행이 없으면 등록 계정이 최소 한 개 있어야 초기화할 수 있습니다. 신규 가입은 반드시 꺼 두어야 하며, 로그인한 모든 확인 완료 일반 계정이 이번 여행을 공유합니다. 여행 생성·선택·초대 화면은 제거되었습니다.
+
 현재 `config.js`에는 Supabase 프로젝트 URL과 공개 publishable 키가 연결되어 있습니다. 데이터 공유는 Supabase를 사용하며, 자동 가격 수집은 별도 설정이 필요합니다.
 
 공동 관리는 README의 Supabase 설정을 완료해야 합니다. `account-helper.html`에서 사용할 한글 또는 영문 아이디의 등록 주소를 계산합니다. 관리자가 Authentication → Users에서 해당 주소와 비밀번호로 계정을 미리 생성하고 Auto Confirm User를 선택한 뒤 신규 가입을 비활성화합니다. 사이트에서는 원래 아이디와 비밀번호만 입력합니다. 이메일 발송이나 SMTP는 필요하지 않습니다. URL과 공개 publishable 키만 `config.js`에 넣고, 서비스 비밀키는 GitHub Secrets에 저장합니다.

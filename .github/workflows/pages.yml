@@ -29,7 +29,7 @@ jobs:
           node --check config.js
           node --check login-id.js
           node --check account-helper.js
-          node --test tests/login-id.test.cjs
+          node --test tests/login-id.test.cjs tests/single-trip.test.cjs
       - name: Prepare public website files
         run: |
           mkdir _site

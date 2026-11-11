@@ -13,7 +13,7 @@
 | 멤버 | 8명 개인별 도착·귀국일 설정, 날짜별 참석자, 참여 타임라인 |
 | 가격 추적 | 편도/왕복 항공, 직항, 숙소 후보, 목표 가격, 비교 링크, 가격 기록, 그래프 |
 | 경비 | 결제자·금액·분담 대상, 당일 참가자 균등 분담, 숙박일별 차등 분담, 송금 금액 추천 |
-| 팀 협업 | 관리자가 미리 만든 ID/PW로 Supabase Auth 로그인, 초대 코드, Row Level Security, Realtime |
+| 팀 협업 | 미리 만든 한글 ID/PW로 로그인하면 이번 발리 여행에 바로 접속, Row Level Security, Realtime |
 | 백업 | JSON 다운로드, 데모 모드에서 JSON 복원 |
 | 자동 점검(선택) | GitHub Actions 매일 실행, Amadeus 공식 API로 KRW 가격 기록, 목표가 도달 시 Discord 알림(선택) |
 
@@ -41,7 +41,7 @@ python3 -m http.server 8000
 ## 2. 공동 작업 설정: Supabase
 
 1. [Supabase](https://supabase.com/)에 로그인해 **새 프로젝트**를 만듭니다.
-2. **SQL Editor**에서 `supabase.sql` 파일의 내용을 **한 번 실행**합니다. 새 프로젝트에서 실행하는 것을 권장합니다. 이 스크립트는 팀만 읽고 수정할 수 있는 정책(RLS), 초대 코드 가입 함수, Realtime 구독 설정을 생성합니다.
+2. **SQL Editor**에서 `supabase.sql` 파일을 **새 프로젝트에 한 번 실행**합니다. 기존 프로젝트에서는 다시 실행하지 않습니다. 이후 계정을 등록하고 아래 7번의 `single-trip.sql`을 실행하면 이번 발리 여행 한 개만 사용하는 구성이 됩니다.
 3. **Project Settings / API Keys** 또는 **Connect**에서 다음 값을 확인합니다.
    - Project URL: `https://xxxx.supabase.co`
    - **Publishable key**: `sb_publishable_...` (과거 프로젝트는 `anon` 키도 가능)
@@ -56,9 +56,9 @@ window.BALI_CONFIG = {
 
 5. [계정 등록 도우미](https://park0515.github.io/bali-crew-planner/account-helper.html)에 사용할 아이디를 입력해 Supabase 등록 주소를 복사합니다. **Authentication → Users → Add user → Create new user**의 Email에 해당 주소를 붙여 넣고 비밀번호를 지정한 뒤 **Auto Confirm User**를 선택합니다. 사이트에서는 `성호` 등 원래 아이디와 비밀번호만 입력합니다. 아이디는 한글·영문·숫자로 시작하는 1~32자의 한글·영문·숫자·점·밑줄·하이픈이며, 영문 대문자는 소문자로 변환합니다. 기존 영문 아이디와 전체 이메일 로그인도 유지됩니다. 등록 주소는 내부 식별용이며 메일을 발송하지 않습니다. Invite user는 사용하지 않습니다. 인증용 계정을 일반 테이블에 직접 INSERT하지 않습니다.
 6. **Authentication → Sign In / Providers**의 **Allow new users to sign up**을 끄고 저장합니다. Email 공급자는 켜 두고 Anonymous는 꺼 두어도 됩니다. 이 사이트는 비밀번호 로그인만 사용하며 SMTP나 메일 인증이 필요하지 않습니다.
-7. 사이트에서 등록된 ID/PW로 로그인 → **새 여행 만들기** → 이름·날짜 입력 → 초대 링크 복사 → 다른 7명이 각자의 등록된 ID/PW로 로그인 후 합류합니다. 비밀번호를 잊으면 관리자가 대시보드에서 변경합니다. 비밀번호는 소스나 config.js에 넣지 않습니다.
+7. **SQL Editor**에서 `single-trip.sql` 전체를 한 번 실행합니다. 기존 여행이 한 개 있으면 데이터와 권한 관리자를 유지합니다. 여행이 없으면 최초 등록된 확인 완료 계정을 관리자로 하여 발리 여행을 한 개 준비합니다. 초기 날짜는 기존 예시인 2027-09-01~2027-09-21이며 여행 설정에서 변경할 수 있습니다. 여행이 여러 개면 데이터 변경 없이 중단하므로 사용할 여행을 먼저 정해야 합니다. 이후 모든 등록 계정은 로그인하면 바로 같은 여행에 들어갑니다. 새 여행 생성·여행 선택·초대 기능은 없습니다. 참가자 이름과 참여 날짜는 참여 멤버에서 관리합니다. 비밀번호를 잊으면 관리자가 대시보드에서 변경합니다. 비밀번호는 소스나 config.js에 넣지 않습니다.
 
-**보안:** 공개 웹사이트에 넣어도 되는 값은 URL과 `sb_publishable_...` 키뿐입니다. `sb_secret_...` 키는 절대로 `config.js`, HTML, JavaScript, GitHub 커밋에 넣지 마세요. 공개 사이트에 키가 노출되어도 테이블의 RLS 정책이 실제 데이터의 접근을 제한합니다. 초대 코드는 팀원에게만 전송하세요.
+**보안:** 공개 웹사이트에 넣어도 되는 값은 URL과 `sb_publishable_...` 키뿐입니다. `sb_secret_...` 키는 절대로 `config.js`, HTML, JavaScript, GitHub 커밋에 넣지 마세요. 확인 완료된 일반 계정만 이번 여행 데이터를 읽고 수정할 수 있습니다. 미리 만든 계정만 허용하려면 신규 가입을 반드시 비활성화해야 합니다. 공개 키만 가지고 있거나 익명 로그인한 방문자는 접근할 수 없습니다. 기존 여행 생성·초대 RPC도 `single-trip.sql`에서 실행 권한을 회수합니다.
 
 ## 3. GitHub Pages에서 웹사이트 공개
 
