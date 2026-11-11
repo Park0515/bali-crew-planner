@@ -34,7 +34,7 @@ function parseResponse(data,r,now=new Date()){
   const p=data.search_parameters||{};
   if(p.departure_id!==r.origin||p.arrival_id!==r.dest||p.outbound_date!==r.depart_on||Number(p.type)!==2||Number(p.stops)!==1||p.currency!=='KRW'||Number(p.adults??1)!==1||Number(p.travel_class??1)!==1)throw new Error('검색 조건 불일치: 저장하지 않았습니다.');
   if(data.error){
-    if(/^Google hasn['’]t returned any results for this query\.?$/i.test(String(data.error).trim()))return {price:null,history:[]};
+    if(/^Google(?: Flights)? hasn['’]t returned any results for this query\.?$/i.test(String(data.error).trim()))return {price:null,history:[]};
     throw new Error('Provider search error: '+String(data.error).slice(0,300));
   }
   const offers=[...(data.best_flights||[]),...(data.other_flights||[])].filter(o=>{

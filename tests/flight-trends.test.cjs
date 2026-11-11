@@ -40,7 +40,7 @@ test('response validation rejects connections, technical stops, wrong dates and 
 });
 
 test('a provider-confirmed empty search is distinguished from a service error',()=>{
-  const r=routes[0],empty={search_parameters:F.requestParams(r),error:"Google hasn't returned any results for this query."};
+  const r=routes[0],empty={search_parameters:F.requestParams(r),error:"Google Flights hasn't returned any results for this query."};
   assert.equal(F.parseResponse(empty,r,now).price,null);
   assert.throws(()=>F.parseResponse({...empty,error:'Service temporarily unavailable'},r,now),/Provider search error/);
 });
