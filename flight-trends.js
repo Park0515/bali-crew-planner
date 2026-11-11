@@ -2,7 +2,7 @@
 (()=>{'use strict';
 const MARKER='AUTO_DIRECT_FLIGHT_V1';
 const LIVE='Google Flights live · SerpAPI',HISTORY='Google Flights history · SerpAPI';
-const airports={ICN:'인천',CJJ:'청주',DPS:'덴파사'};
+const airports={ICN:'인천',DPS:'덴파사'};
 const day=value=>new Date(new Date(value).getTime()+9*3600000).toISOString().slice(0,10);
 const validDate=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s;
 const key=r=>`${r.origin}-${r.dest}-${r.depart_on}`;
@@ -10,7 +10,7 @@ function routes(members){
   const result=[];
   for(const [field,direction] of [['starts_on','outbound'],['ends_on','inbound']]){
     const dates=[...new Set(members.map(m=>m[field]).filter(validDate))].sort();
-    for(const date of dates)for(const airport of ['ICN','CJJ']){
+    for(const date of dates)for(const airport of ['ICN']){
       const r={origin:direction==='outbound'?airport:'DPS',dest:direction==='outbound'?'DPS':airport,depart_on:date,direction,people:members.filter(m=>m[field]===date).length};
       result.push({...r,key:key(r),label:`${direction==='outbound'?'출국':'귀국'} ${date} · ${airports[r.origin]} → ${airports[r.dest]}`});
     }
@@ -31,9 +31,12 @@ function series(quotes,watchIds,now=new Date()){
 }
 function requestParams(r){return {engine:'google_flights',departure_id:r.origin,arrival_id:r.dest,outbound_date:r.depart_on,type:2,stops:1,adults:1,travel_class:1,currency:'KRW',hl:'ko',gl:'kr',sort_by:2};}
 function parseResponse(data,r,now=new Date()){
-  if(data.error)throw new Error('Google Flights 조회 실패');
   const p=data.search_parameters||{};
   if(p.departure_id!==r.origin||p.arrival_id!==r.dest||p.outbound_date!==r.depart_on||Number(p.type)!==2||Number(p.stops)!==1||p.currency!=='KRW'||Number(p.adults??1)!==1||Number(p.travel_class??1)!==1)throw new Error('검색 조건 불일치: 저장하지 않았습니다.');
+  if(data.error){
+    if(/^Google hasn['’]t returned any results for this query\.?$/i.test(String(data.error).trim()))return {price:null,history:[]};
+    throw new Error('Provider search error: '+String(data.error).slice(0,300));
+  }
   const offers=[...(data.best_flights||[]),...(data.other_flights||[])].filter(o=>{
     if(!Array.isArray(o.flights)||o.flights.length!==1||(o.layovers||[]).length||!Number.isFinite(o.price)||o.price<=0)return false;
     const f=o.flights[0];return f.departure_airport?.id===r.origin&&f.arrival_airport?.id===r.dest&&String(f.departure_airport?.time||'').slice(0,10)===r.depart_on&&!(Number(f.stops)||Number(f.number_of_stops));

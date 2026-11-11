@@ -24,7 +24,11 @@ async function db(path,{method='GET',body,prefer}={}){
 }
 async function collect(trip,r,w){
   // Claim before the external request, including failed/empty searches. No same-day retry.
-  const claimed=await db('flight_price_checks?on_conflict=watch_id,checked_on',{method:'POST',body:{trip_id:trip.id,watch_id:w.id,checked_on:today},prefer:'resolution=ignore-duplicates,return=representation'});
+  let claimed=await db('flight_price_checks?on_conflict=watch_id,checked_on',{method:'POST',body:{trip_id:trip.id,watch_id:w.id,checked_on:today},prefer:'resolution=ignore-duplicates,return=representation'});
+  if(!claimed?.length&&process.env.RETRY_FAILED==='true'){
+    const failed=await db(`flight_price_checks?watch_id=eq.${w.id}&checked_on=eq.${today}&status=eq.error&select=id`);
+    if(failed.length)claimed=await db(`flight_price_checks?id=eq.${failed[0].id}&status=eq.error`,{method:'PATCH',body:{status:'pending'},prefer:'return=representation'});
+  }
   if(!claimed?.length){console.log(`${r.key}: already attempted today`);return;}
   const finish=status=>db('flight_price_checks?id=eq.'+encodeURIComponent(claimed[0].id),{method:'PATCH',body:{status,checked_at:new Date().toISOString()}});
   try{
@@ -44,7 +48,14 @@ async function collect(trip,r,w){
     // Do not backfill provider history: historical flight segments cannot be verified as nonstop.
     if(quotes.length)await db('price_quotes',{method:'POST',body:quotes});
     await finish('ok');console.log(`${r.key}: saved ${quotes.length} observations`);
-  }catch(error){await finish('error');console.error(`${r.key}: collection failed (${error.message?.startsWith('SerpAPI HTTP')||error.message?.startsWith('Supabase HTTP')?error.message:'invalid, unavailable or timed-out response'})`);throw new Error('Flight collection failed');}
+  }catch(error){
+    await finish('error');
+    let message=String(error.message||'Unknown error');
+    for(const name of required)message=message.split(process.env[name]).join('[redacted]');
+    message=message.replace(/api_key=[^&\s]+/gi,'api_key=[redacted]').replace(/https?:\/\/\S+/g,'[URL redacted]');
+    console.error(`${r.key}: collection failed (${message.slice(0,300)})`);
+    throw new Error('Flight collection failed');
+  }
 }
 async function main(){
   const trips=await db('trips?select=id');if(trips.length!==1)throw new Error('Exactly one Bali trip is required');

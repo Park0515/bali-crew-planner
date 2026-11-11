@@ -1,6 +1,11 @@
 name: Direct flight price trends
 on:
   workflow_dispatch:
+    inputs:
+      retry_failed:
+        description: '오늘 실패한 조건만 재시도 (추가 API 한도 사용 가능)'
+        type: boolean
+        default: false
   schedule:
     - cron: '31 0 * * *'
 permissions:
@@ -23,4 +28,5 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
+          RETRY_FAILED: ${{ github.event.inputs.retry_failed || 'false' }}
         run: node scripts/check-flight-prices.mjs
