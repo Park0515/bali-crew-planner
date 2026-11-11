@@ -12,37 +12,53 @@ const F=context.BaliFlights;
 const members=[...Array.from({length:6},()=>({starts_on:'2027-09-22',ends_on:'2027-10-08'})),{starts_on:'2027-10-02',ends_on:'2027-10-08'},{starts_on:'2027-09-22',ends_on:'2027-09-28'}];
 const routes=F.routes(members);
 const now=new Date('2026-11-11T03:00:00Z');
-function response(r){return {search_parameters:F.requestParams(r),best_flights:[{price:350000,flights:[{departure_airport:{id:r.origin,time:r.depart_on+' 10:00'},arrival_airport:{id:r.dest},airline:'Example Air'}]}],price_insights:{price_history:[[Date.parse('2026-11-10T00:00:00Z')/1000,330000]]}};}
+function response(r,phase='outbound',token='chosen-outbound'){const inbound=phase==='inbound';return {search_parameters:{...F.requestParams(r),...(inbound?{departure_token:token}:{})},best_flights:[{type:'Round trip',price:inbound?612345:350000,departure_token:inbound?undefined:token,flights:[{departure_airport:{id:inbound?r.dest:r.origin,time:(inbound?r.return_on:r.depart_on)+' 10:00'},arrival_airport:{id:inbound?r.origin:r.dest},airline:'Example Air'}]}]};}
 
-test('distinct member dates generate exactly four one-way airport/date combinations',()=>{
-  assert.equal(routes.length,4);assert.equal(new Set(routes.map(r=>r.key)).size,4);
-  assert.deepEqual(Array.from(routes.filter(r=>r.direction==='outbound'),r=>r.key),['ICN-DPS-2027-09-22','ICN-DPS-2027-10-02']);
-  assert.equal(routes.find(r=>r.key==='ICN-DPS-2027-09-22').people,7);
-  assert.equal(routes.find(r=>r.key==='DPS-ICN-2027-09-28').people,1);
-  assert.equal(F.routes([{starts_on:'invalid',ends_on:'2027-02-31'}]).length,0);
+test('member date pairs generate three round-trip combinations without inventing cross-pairs',()=>{
+  assert.equal(routes.length,3);assert.equal(new Set(routes.map(r=>r.key)).size,3);
+  assert.deepEqual(Array.from(routes,r=>r.key),['ICN-DPS-2027-09-22-2027-10-08','ICN-DPS-2027-09-22-2027-09-28','ICN-DPS-2027-10-02-2027-10-08']);
+  assert.equal(routes[0].people,6);assert.equal(routes[1].people,1);assert.equal(routes[2].people,1);
+  assert.equal(F.routes([{starts_on:'invalid',ends_on:'2027-02-31'},{starts_on:'2027-10-08',ends_on:'2027-09-22'}]).length,0);
 });
 
-test('every request is a one-person economy nonstop one-way KRW search',()=>{
-  for(const r of routes){const p=F.requestParams(r);assert.equal(p.stops,1);assert.equal(p.type,2);assert.equal(p.adults,1);assert.equal(p.travel_class,1);assert.equal(p.currency,'KRW');assert.equal(p.return_date,undefined);}
+test('every request uses actual round-trip dates with nonstop economy and one adult',()=>{
+  for(const r of routes){const p=F.requestParams(r);assert.equal(p.stops,1);assert.equal(p.type,1);assert.equal(p.adults,1);assert.equal(p.travel_class,1);assert.equal(p.currency,'KRW');assert.equal(p.return_date,r.return_on);}
 });
 
-test('response validation rejects connections, technical stops, wrong dates and airports',()=>{
-  const r=routes[0];assert.equal(F.parseResponse(response(r),r,now).price,350000);
-  for(const change of [
+test('changing a member date immediately rebuilds the deduplicated list',()=>{
+  const changed=members.map(m=>({...m}));
+  changed[7].ends_on='2027-10-08';
+  const updated=F.routes(changed);
+  assert.equal(updated.length,2);
+  assert.equal(updated.find(r=>r.depart_on==='2027-09-22').people,7);
+  assert(!updated.some(r=>r.return_on==='2027-09-28'));
+  changed[7].starts_on='2027-09-23';
+  assert.equal(F.routes(changed).length,3);
+  const page=context.BaliFlightView.render({members:changed,watches:[],quotes:[]},[],now);
+  assert.match(page,/2027-09-23/);
+  assert(!page.includes('귀국 2027-09-28'));
+});
+
+test('outbound and inbound must both be nonstop on their exact dates',()=>{
+  const r=routes[0];assert.equal(F.parseResponse(response(r),r).price,350000);
+  for(const phase of ['outbound','inbound'])for(const change of [
     d=>d.best_flights[0].flights.push(d.best_flights[0].flights[0]),
     d=>d.best_flights[0].layovers=[{duration:10}],
     d=>d.best_flights[0].flights[0].stops=1,
     d=>d.best_flights[0].flights[0].departure_airport.time='2027-09-23 10:00',
     d=>d.best_flights[0].flights[0].arrival_airport.id='SIN',
-    d=>d.best_flights[0].price=0
-  ]){const data=response(r);change(data);assert.equal(F.parseResponse(data,r,now).price,null);}
-  const data=response(r);data.search_parameters.stops=0;assert.throws(()=>F.parseResponse(data,r,now));
+    d=>d.best_flights[0].price=0,
+    d=>d.best_flights[0].type='One way'
+  ]){const data=response(r,phase);change(data);assert.equal(F.parseResponse(data,r,phase,phase==='inbound'?'chosen-outbound':null).price,null);}
+  const data=response(r);data.search_parameters.stops=0;assert.throws(()=>F.parseResponse(data,r));
+  const inbound=response(r,'inbound');assert.equal(F.parseResponse(inbound,r,'inbound','chosen-outbound').price,612345);
+  assert.throws(()=>F.parseResponse(inbound,r,'inbound','another-flight'));
 });
 
 test('a provider-confirmed empty search is distinguished from a service error',()=>{
   const r=routes[0],empty={search_parameters:F.requestParams(r),error:"Google Flights hasn't returned any results for this query."};
-  assert.equal(F.parseResponse(empty,r,now).price,null);
-  assert.throws(()=>F.parseResponse({...empty,error:'Service temporarily unavailable'},r,now),/Provider search error/);
+  assert.equal(F.parseResponse(empty,r).price,null);
+  assert.throws(()=>F.parseResponse({...empty,error:'Service temporarily unavailable'},r),/Provider search error/);
 });
 
 test('trend window excludes old, future, fake and mismatched-currency observations',()=>{
@@ -55,23 +71,23 @@ test('strict chart never plots unverifiable Google historical prices',()=>{
   const html=context.BaliFlightView.chart({start:'2026-10-13',end:'2026-11-11',live:[],history:[{day:'2026-11-10',price:350000}]},'route');
   assert.match(html,/아직 저장된 가격/);assert(!html.includes('<circle'));
   const page=context.BaliFlightView.render({members,watches:[],quotes:[]},[],now);
-  assert.equal((page.match(/class="card flight-trend-card"/g)||[]).length,4);
+  assert.equal((page.match(/class="card flight-trend-card"/g)||[]).length,3);
 });
 
-test('collector saves four validated quotes, ignores unverified history, and skips same-day repeats',()=>{
+test('collector saves three actual round-trip totals, ignores unverified history, and skips same-day repeats',()=>{
   const collectorUrl=require('node:url').pathToFileURL(path.join(root,'scripts/check-flight-prices.mjs')).href;
   const code=`
     import assert from 'node:assert/strict';
     const RealDate=Date;globalThis.Date=class extends RealDate{constructor(...args){super(...(args.length?args:['2026-11-11T03:00:00Z']))}static now(){return new RealDate('2026-11-11T03:00:00Z').getTime()}};
     process.env.SUPABASE_URL='https://example.supabase.co';process.env.SUPABASE_SECRET_KEY='sb_secret_test_fixture';process.env.SERPAPI_API_KEY='test-api';
-    const members=${JSON.stringify(members)},watches=[],ledger=new Map(),quotes=[];let apiCalls=0;
+    const members=${JSON.stringify(members)},watches=[{id:'old',kind:'flight',note:'AUTO_DIRECT_FLIGHT_V1',origin:'ICN',dest:'DPS',depart_on:'2027-09-22',return_on:null,nonstop:true,adults:1,is_active:true}],ledger=new Map(),quotes=[];let apiCalls=0;
     globalThis.fetch=async(input,options={})=>{
       const url=new URL(input),method=options.method||'GET',body=options.body?JSON.parse(options.body):null;
       const json=data=>new Response(JSON.stringify(data),{status:200});
       if(url.hostname==='serpapi.com'){
-        apiCalls++;assert.equal(url.searchParams.get('stops'),'1');assert.equal(url.searchParams.get('type'),'2');
+        apiCalls++;assert.equal(url.searchParams.get('stops'),'1');assert.equal(url.searchParams.get('type'),'1');
         const p=Object.fromEntries(url.searchParams);delete p.api_key;
-        return json({search_parameters:p,best_flights:[{price:350000,flights:[{departure_airport:{id:p.departure_id,time:p.outbound_date+' 10:00'},arrival_airport:{id:p.arrival_id}}]}],price_insights:{price_history:[[1794268800,300000]]}});
+        const inbound=!!p.departure_token;return json({search_parameters:p,best_flights:[{type:'Round trip',price:inbound?612345:350000,departure_token:inbound?undefined:'chosen-outbound',flights:[{departure_airport:{id:inbound?p.arrival_id:p.departure_id,time:(inbound?p.return_date:p.outbound_date)+' 10:00'},arrival_airport:{id:inbound?p.departure_id:p.arrival_id}}]}]});
       }
       const table=url.pathname.split('/').at(-1);
       if(table==='trips')return json([{id:'trip'}]);
@@ -79,6 +95,7 @@ test('collector saves four validated quotes, ignores unverified history, and ski
       if(table==='watch_items'){
         if(method==='GET')return json(watches);
         if(method==='POST'){const w={...body,id:'w'+watches.length};watches.push(w);return json([w]);}
+        if(method==='PATCH')Object.assign(watches.find(w=>w.id===url.searchParams.get('id').slice(3)),body);
         return json(null);
       }
       if(table==='flight_price_checks'){
@@ -93,8 +110,13 @@ test('collector saves four validated quotes, ignores unverified history, and ski
       throw Error('Unexpected request '+table);
     };
     const one=await import(${JSON.stringify(collectorUrl+'?one')});await one.completed;
-    assert.equal(apiCalls,4);assert.equal(quotes.length,4);assert(quotes.every(q=>q.provider==='Google Flights live · SerpAPI'));
-    const two=await import(${JSON.stringify(collectorUrl+'?two')});await two.completed;assert.equal(apiCalls,4);assert.equal(quotes.length,4);
+    assert.equal(apiCalls,6);assert.equal(quotes.length,3);assert(quotes.every(q=>q.provider==='Google Flights round trip · SerpAPI'&&q.price===612345));
+    assert.equal(watches[0].is_active,false);
+    const two=await import(${JSON.stringify(collectorUrl+'?two')});await two.completed;assert.equal(apiCalls,6);assert.equal(quotes.length,3);
+    members[7].ends_on='2027-10-08';
+    const three=await import(${JSON.stringify(collectorUrl+'?three')});await three.completed;
+    assert.equal(apiCalls,6);assert.equal(quotes.length,3);
+    assert.equal(watches.find(w=>w.return_on==='2027-09-28').is_active,false);
   `;
   const result=spawnSync(process.execPath,['--input-type=module','-e',code],{encoding:'utf8'});
   assert.equal(result.status,0,result.stderr+'\n'+result.stdout);
