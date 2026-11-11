@@ -62,7 +62,7 @@ window.BALI_CONFIG = {
 
 ## 3. GitHub Pages에서 웹사이트 공개
 
-1. [GitHub](https://github.com/new)에서 `bali-crew-planner`라는 **Private** 리포지토리를 만듭니다. 비공개 저장소의 공개 Pages는 개인 계정 기준 GitHub Pro가 필요합니다. 조직 계정은 지원되는 플랜과 정책을 확인하세요.
+1. `Park0515/bali-crew-planner`는 무료 GitHub Pages를 사용하는 **Public** 리포지토리입니다. 소스와 커밋 기록이 공개되므로 실제 비밀키와 개인 데이터를 커밋하지 마세요.
 2. 압축 해제한 폴더 안의 **모든 파일과 숨김 폴더 `.github`까지** 리포지토리에 업로드합니다. `config.js`에는 **공개 키만** 들어 있어야 합니다.
 3. 리포지토리 **Settings → Pages → Build and deployment → Source → GitHub Actions**를 선택합니다. `main`에 푸시하면 `.github/workflows/pages.yml`이 웹사이트 파일만 배포합니다. 필요하면 Actions에서 배포 워크플로를 수동 실행합니다.
 4. 발행된 사이트 주소(보통 `https://USERNAME.github.io/bali-crew-planner/`)를 Supabase Authentication URL Configuration에 추가합니다.

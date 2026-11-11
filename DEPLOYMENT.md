@@ -1,13 +1,13 @@
-# 비공개 저장소 + 공개 GitHub Pages
+# 공개 저장소 + 무료 GitHub Pages
 
 ## 준비된 배포 방식
 
-- 이 폴더의 내용이 `bali-crew-planner` 비공개 저장소의 루트에 들어갑니다.
-- 개인 계정은 GitHub Pro, 조직 계정은 지원되는 유료 플랜이 필요합니다.
+- 소스 저장소: https://github.com/Park0515/bali-crew-planner (Public)
+- 공개 저장소의 GitHub Pages를 사용하므로 GitHub Pro가 필요하지 않습니다.
 - 저장소 Settings → Pages → Source를 **GitHub Actions**로 설정합니다.
 - `main`에 푸시하면 `.github/workflows/pages.yml`이 자동 배포합니다.
 - 공개 산출물은 `index.html`, `styles.css`, `app.js`, `config.js`, `.nojekyll`만 포함합니다.
-- 예상 주소는 `https://<GitHub 사용자명>.github.io/bali-crew-planner/`입니다. 실제 배포 성공 후 확정됩니다.
+- 사이트 주소: https://park0515.github.io/bali-crew-planner/
 
 ## 데이터 공유와 가격 수집
 
@@ -17,6 +17,6 @@
 
 가격 자동 수집은 README의 Amadeus 및 GitHub Secrets 설정을 완료한 뒤 수동 실행으로 확인합니다. 이후 Repository variable `PRICE_MONITOR_ENABLED`를 `true`로 설정하면 기존 매일 예약이 활성화됩니다. 설정 전에는 예약 실행의 수집 작업을 건너뜁니다.
 
-GitHub 저장소를 비공개로 해도 배포된 HTML, CSS, JavaScript, config.js는 방문자가 열람할 수 있습니다.
+저장소의 전체 소스와 커밋 기록 및 배포된 HTML, CSS, JavaScript, config.js는 누구나 열람할 수 있습니다. 비밀키는 GitHub Secrets에만 보관합니다.
 
 공식 안내: https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages
