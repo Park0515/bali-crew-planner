@@ -13,7 +13,7 @@
 | 멤버 | 8명 개인별 도착·귀국일 설정, 날짜별 참석자, 참여 타임라인 |
 | 가격 추적 | 편도/왕복 항공, 직항, 숙소 후보, 목표 가격, 비교 링크, 가격 기록, 그래프 |
 | 경비 | 결제자·금액·분담 대상, 당일 참가자 균등 분담, 숙박일별 차등 분담, 송금 금액 추천 |
-| 팀 협업 | Supabase Auth 이메일 로그인, 초대 코드, Row Level Security, Realtime |
+| 팀 협업 | 관리자가 미리 만든 ID/PW로 Supabase Auth 로그인, 초대 코드, Row Level Security, Realtime |
 | 백업 | JSON 다운로드, 데모 모드에서 JSON 복원 |
 | 자동 점검(선택) | GitHub Actions 매일 실행, Amadeus 공식 API로 KRW 가격 기록, 목표가 도달 시 Discord 알림(선택) |
 
@@ -54,9 +54,9 @@ window.BALI_CONFIG = {
 };
 ```
 
-5. **Authentication → Providers → Email**에서 이메일 로그인 기능이 활성화되어 있는지 확인합니다. 이메일 발송·로그인 제한은 Supabase 프로젝트 요금제와 SMTP 설정을 따릅니다.
-6. 아래 GitHub Pages 주소가 나온 뒤 **Authentication → URL Configuration**에서 Site URL 및 Redirect URL을 설정합니다. 예: `https://USERNAME.github.io/bali-crew-planner/`
-7. 사이트에서 첫 사용자가 이메일로 로그인 → **새 여행 만들기** → 이름·날짜 입력 → 초대 링크 복사 → 다른 7명이 이메일 로그인 후 합류합니다.
+5. **Authentication → Users → Add user → Create new user**에서 각자의 이메일 형식 ID와 비밀번호를 직접 등록하고 **Auto Confirm User**를 선택합니다. Invite user는 사용하지 않습니다. 인증용 계정을 일반 테이블에 직접 INSERT하지 않습니다.
+6. **Authentication → Sign In / Providers**의 **Allow new users to sign up**을 끄고 저장합니다. Email 공급자는 켜 두고 Anonymous는 꺼 두어도 됩니다. 이 사이트는 비밀번호 로그인만 사용하며 SMTP나 메일 인증이 필요하지 않습니다.
+7. 사이트에서 등록된 ID/PW로 로그인 → **새 여행 만들기** → 이름·날짜 입력 → 초대 링크 복사 → 다른 7명이 각자의 등록된 ID/PW로 로그인 후 합류합니다. 비밀번호를 잊으면 관리자가 대시보드에서 변경합니다. 비밀번호는 소스나 config.js에 넣지 않습니다.
 
 **보안:** 공개 웹사이트에 넣어도 되는 값은 URL과 `sb_publishable_...` 키뿐입니다. `sb_secret_...` 키는 절대로 `config.js`, HTML, JavaScript, GitHub 커밋에 넣지 마세요. 공개 사이트에 키가 노출되어도 테이블의 RLS 정책이 실제 데이터의 접근을 제한합니다. 초대 코드는 팀원에게만 전송하세요.
 
