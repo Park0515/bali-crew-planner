@@ -1,0 +1,26 @@
+name: Direct flight price trends
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '31 0 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: direct-flight-monitor
+  cancel-in-progress: false
+jobs:
+  collect:
+    if: vars.FLIGHT_MONITOR_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Collect nonstop one-way prices
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
+        run: node scripts/check-flight-prices.mjs

@@ -29,11 +29,14 @@ jobs:
           node --check config.js
           node --check login-id.js
           node --check account-helper.js
-          node --test tests/login-id.test.cjs tests/single-trip.test.cjs
+          node --check flight-trends.js
+          node --check flight-trends-view.js
+          node --check scripts/check-flight-prices.mjs
+          node --test tests/login-id.test.cjs tests/single-trip.test.cjs tests/flight-trends.test.cjs
       - name: Prepare public website files
         run: |
           mkdir _site
-          cp index.html styles.css app.js config.js login-id.js account-helper.html account-helper.js .nojekyll _site/
+          cp index.html styles.css app.js config.js login-id.js account-helper.html account-helper.js flight-trends.js flight-trends-view.js .nojekyll _site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

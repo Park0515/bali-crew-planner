@@ -83,6 +83,8 @@ git push -u origin main
 
 ## 4. 선택 사항: 항공·숙소 가격 자동 점검
 
+멤버 날짜별 **인천/청주 ↔ 덴파사 직항 편도 가격 추이**는 [FLIGHT-SETUP.md](FLIGHT-SETUP.md)를 따릅니다. SerpAPI Free의 Google Flights 연동을 사용하며, 별도의 Secrets·`flight-tracking.sql`·`FLIGHT_MONITOR_ENABLED` 설정이 필요합니다. API가 연결되기 전에는 그래프에 실제 가격이 표시되지 않습니다. 아래 Amadeus 설정은 기존 수동 항공 추적 및 호텔 수집용입니다.
+
 GitHub Actions는 `.github/workflows/price-monitor.yml`에서 **매일 09:17(Asia/Seoul)** 예약 실행하도록 작성했습니다. 수집 작업은 Repository variable `PRICE_MONITOR_ENABLED`가 `true`일 때만 예약 실행되며, 수동 실행은 이 값과 관계없이 가능합니다. 설정을 마친 뒤 활성화하세요. 실행 시 공식 [Amadeus Self-Service API](https://developers.amadeus.com/)로 조회를 시도합니다.
 
 ### 설정

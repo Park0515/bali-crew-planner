@@ -32,7 +32,7 @@ test('login opens the only trip directly and loads its shared data',async()=>{
   assert.equal(a.testApi.state.tripId,'bali');
   assert.equal(a.testApi.state.ready,true);
   assert.equal(a.context.didRender,true);
-  assert.equal(a.queries.length,7);
+  assert.equal(a.queries.length,8);
   assert(!/초대 코드|새 여행|다른 여행/.test(a.testApi.settingsView()));
 });
 
