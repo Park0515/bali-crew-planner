@@ -1,0 +1,28 @@
+name: Bali crew price monitor
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 9 * * *'
+      timezone: 'Asia/Seoul'
+permissions:
+  contents: read
+jobs:
+  check-prices:
+    if: github.event_name == 'workflow_dispatch' || vars.PRICE_MONITOR_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check Amadeus flight and hotel quotes
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          AMADEUS_CLIENT_ID: ${{ secrets.AMADEUS_CLIENT_ID }}
+          AMADEUS_CLIENT_SECRET: ${{ secrets.AMADEUS_CLIENT_SECRET }}
+          AMADEUS_ENV: ${{ vars.AMADEUS_ENV }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: node scripts/check-prices.mjs
