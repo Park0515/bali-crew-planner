@@ -1,0 +1,30 @@
+name: Stay URL price monitor
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '43 0 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: stay-url-monitor
+  cancel-in-progress: false
+jobs:
+  collect:
+    if: vars.STAY_URL_MONITOR_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install page renderer
+        run: |
+          npm install --no-save --package-lock=false playwright@1.65.0
+          npx playwright install --with-deps chromium
+      - name: Read registered stay pages
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          STAY_URL_TO_REGISTER: ${{ secrets.STAY_URL_TO_REGISTER }}
+        run: node scripts/check-stay-urls.mjs
