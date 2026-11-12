@@ -22,8 +22,10 @@ async function search(c){
     const body=await res.json().catch(()=>({})),message=String(body.error||'');
     const field=/adults/i.test(message)?'adults':/check_in|check_out|date/i.test(message)?'dates':/query|\bq\b/i.test(message)?'query':'other';
     const range=message.match(/between\s+(\d{1,2})\s+and\s+(\d{1,2})/i);
-    // Only a fixed parameter category and numeric bound, never raw error/query/key text.
-    throw new Error('SerpAPI HTTP '+res.status+' parameter='+field+(range?' allowed='+range[1]+'..'+range[2]:''));
+    let safe=message;
+    for(const value of [root,secret,process.env.SERPAPI_API_KEY,c.name,...Object.values(G.requestParams(c)).filter(v=>typeof v==='string'&&v.length>2)])safe=safe.split(value).join('[redacted]');
+    safe=safe.replace(/https?:\/\/\S+/g,'[URL]').replace(/api_key[=:]\s*[^&\s]+/gi,'api_key=[redacted]').replace(/[A-Za-z0-9_-]{30,}/g,'[token]').split('\n')[0].slice(0,250);
+    throw new Error('SerpAPI HTTP '+res.status+' parameter='+field+(range?' allowed='+range[1]+'..'+range[2]:'')+' '+safe);
   }
   return G.parseResponse(await res.json(),c);
 }
