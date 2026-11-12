@@ -30,11 +30,16 @@ async function readPage(browser,c){
       await page.getByRole('dialog',{name:'가격 및 통화 선택'}).getByRole('option',{name:'₩ 한국 원',exact:true}).first().click();
       await page.getByRole('button',{name:'요금 표시(한국 원)',exact:true}).waitFor({state:'visible',timeout:30000});
     }
+    await currency.click();
+    const picker=page.getByRole('dialog',{name:'가격 및 통화 선택'});
+    const inclusive=picker.getByRole('checkbox',{name:'1박당 요금(세금 및 봉사료 포함)',exact:true});
+    if(!await inclusive.isChecked())await inclusive.click();
+    else await picker.getByRole('button',{name:'close',exact:true}).click();
     await page.locator('#property-room-grid-root').waitFor({state:'attached',timeout:45000}).catch(()=>{});
     if(await page.locator('#property-room-grid-root').count())await page.locator('#property-room-grid-root').scrollIntoViewIfNeeded();
     await page.waitForFunction(()=>{
       const text=document.body.innerText;
-      return [...document.querySelectorAll('[data-testid="offer-price"]')].some(el=>/1박당\s*총\s*금액/.test(el.innerText))||/선택하신 날짜에 이용 가능한 객실이 없습니다|선택하신 날짜에는 예약 가능한 객실이 없습니다|verify you are human|access denied|로봇이 아님을|보안 확인/i.test(text);
+      return [...document.querySelectorAll('[data-testid="offer-price"]')].some(el=>/1박당\s*(?:총\s*금액|세금\s*및\s*제반요금\s*포함)/.test(el.innerText))||/선택하신 날짜에 이용 가능한 객실이 없습니다|선택하신 날짜에는 예약 가능한 객실이 없습니다|verify you are human|access denied|로봇이 아님을|보안 확인/i.test(text);
     },null,{timeout:45000}).catch(()=>{});
     const body=await page.locator('body').innerText();
     const blocked=/verify you are human|access denied|로봇이 아님을|보안 확인/i.test(body)||/captcha|challenge/i.test(new URL(page.url()).pathname);
@@ -45,7 +50,7 @@ async function readPage(browser,c){
       propertyId:finalUrl.searchParams.get('propertyId'),
       checkinText:await text('#check-in-box'),checkoutText:await text('#check-out-box'),occupancyText:await text('#occupancy-box'),
       currencyText:await page.getByRole('button',{name:/요금 표시/}).first().getAttribute('aria-label').catch(()=>''),
-      offers:await page.locator('#property-room-grid-root [data-testid="room-offer"] [data-testid="offer-price"]').allInnerTexts(),
+      offers:await page.locator('#property-room-grid-root [data-testid="room-offer"] [data-testid="offer-price"]').evaluateAll(nodes=>nodes.map(el=>({text:el.innerText,finalPrice:el.querySelector('[data-testid="room-offer-final-price"]')?.innerText||''}))),
       noOffer:/선택하신 날짜에 이용 가능한 객실이 없습니다|선택하신 날짜에는 예약 가능한 객실이 없습니다/.test(body)
     };
     const result=S.extract(snapshot,c);

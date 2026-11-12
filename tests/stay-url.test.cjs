@@ -21,6 +21,9 @@ test('only explicit tax-inclusive nightly amounts are extracted, never a base pr
   const result=S.extract(snapshot(),c);assert.equal(result.status,'ok');assert.equal(result.price,338261);assert.equal(result.basis,'nightly');
   assert.notEqual(result.price,295821);assert.notEqual(result.price,183786);assert.notEqual(result.price,338261*6);
   const missing=snapshot();missing.offers=['시작가 ₩295,821'];assert.equal(S.extract(missing,c).status,'unverified');
+  const inclusive=snapshot();inclusive.offers=[{text:'원래 요금: ₩368,892 쿠폰 ₩183,786 적용됨 ₩338,261 ‎1박당 세금 및 제반요금 포함',finalPrice:'₩338,261'}];
+  assert.equal(S.extract(inclusive,c).price,338261);
+  inclusive.offers[0].text='₩338,261 1박당 세금 및 제반요금 불포함';assert.equal(S.extract(inclusive,c).status,'unverified');
 });
 
 test('wrong property, dates, occupancy or currency cannot become price records',()=>{

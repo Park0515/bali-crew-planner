@@ -35,10 +35,12 @@ function extract(snapshot,c){
   if(!compact(snapshot.checkinText).includes(dateLabel(c.checkin))||!compact(snapshot.checkoutText).includes(dateLabel(c.checkout)))return {status:'unverified',reason:'dates_unconfirmed'};
   if(!compact(snapshot.occupancyText).includes(`성인${c.adults}명`)||!compact(snapshot.occupancyText).includes(`객실${c.rooms}개`))return {status:'unverified',reason:'occupancy_unconfirmed'};
   const prices=[];
-  for(const text of snapshot.offers||[]){
+  for(const offer of snapshot.offers||[]){
+    const text=typeof offer==='string'?offer:offer.text||'';
     // Only the explicit tax-inclusive per-night amount; ignore base, crossed-out and coupon values.
-    if(!/세금\s*및\s*수수료\s*포함/.test(text)||/세금\s*및\s*수수료\s*(?:별도|미포함|불포함)/.test(text))continue;
-    const match=text.match(/1박당\s*총\s*금액\s*[₩￦]\s*([\d,]+)/);
+    if(!/세금\s*및\s*(?:수수료|제반요금)\s*포함/.test(text)||/세금\s*및\s*(?:수수료|제반요금)\s*(?:별도|미포함|불포함)/.test(text))continue;
+    let match=text.match(/1박당\s*총\s*금액\s*[₩￦]\s*([\d,]+)/);
+    if(!match&&typeof offer==='object'&&/1박당\s*세금\s*및\s*제반요금\s*포함/.test(text))match=String(offer.finalPrice||'').trim().match(/^[₩￦]\s*([\d,]+)$/);
     const amount=match?Number(match[1].replaceAll(',','')):NaN;
     if(Number.isSafeInteger(amount)&&amount>0)prices.push(amount);
   }
