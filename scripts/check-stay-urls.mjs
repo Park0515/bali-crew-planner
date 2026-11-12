@@ -33,7 +33,7 @@ async function readPage(browser,c){
     await currency.click();
     const picker=page.getByRole('dialog',{name:'가격 및 통화 선택'});
     const inclusive=picker.getByRole('checkbox',{name:'1박당 요금(세금 및 봉사료 포함)',exact:true});
-    if(!await inclusive.isChecked())await inclusive.click();
+    if(await inclusive.getAttribute('aria-checked')!=='true')await inclusive.click();
     else await picker.getByRole('button',{name:'close',exact:true}).click();
     await page.locator('#property-room-grid-root').waitFor({state:'attached',timeout:45000}).catch(()=>{});
     if(await page.locator('#property-room-grid-root').count())await page.locator('#property-room-grid-root').scrollIntoViewIfNeeded();
@@ -89,7 +89,7 @@ async function main(){
     }
     if(!rows?.length){console.log(`stay ${w.id}: already checked today`);continue;}
     let result;
-    try{result=await readPage(browser,c);}catch{result={status:'error'};}
+    try{result=await readPage(browser,c);}catch(error){result={status:'error'};console.log('Page read error: '+String(error.message||'').split('\n')[0].replace(/https?:\/\/\S+/g,'[page]'));}
     if(result.status==='ok'){
       await db('price_quotes',{method:'POST',body:{trip_id:trip.id,watch_id:w.id,price:result.price,price_basis:S.BASIS,context_key:contextKey,currency:'KRW',provider:S.PROVIDER,observed_at:new Date().toISOString(),summary:`${c.checkin}~${c.checkout} ${c.nights}박 · 성인 ${c.adults}명 · 객실 ${c.rooms}개 · 비로그인 공개 페이지의 세금·수수료 포함 1박 표시 요금. 객실·취소·쿠폰 조건은 예약처 확인.`}});
       if(w.label==='Agoda 숙소 '+c.propertyId&&result.title)await db('watch_items?id=eq.'+w.id,{method:'PATCH',body:{label:result.title.slice(0,100)}});
