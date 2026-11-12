@@ -1,22 +1,22 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const {spawnSync}=require('node:child_process');
-const root=path.resolve(__dirname,'..'),context=vm.createContext({URL,Date});
+const root=path.resolve(__dirname,'..'),context=vm.createContext({URL,Date,atob});
 vm.runInContext(fs.readFileSync(path.join(root,'stay-google.js'),'utf8'),context);
 const G=context.BaliGoogleHotels;
-const watch={id:'hotel',kind:'stay',label:'Fixture Villa',provider:G.PROVIDER,checkin_on:'2027-09-22',checkout_on:'2027-09-28',adults:8,rooms:1,price_basis:'nightly'};
+const watch={id:'hotel',kind:'stay',label:'Fixture Villa',provider:G.PROVIDER,checkin_on:'2027-09-22',checkout_on:'2027-09-28',adults:2,rooms:1,price_basis:'nightly'};
 const c=G.fromWatch(watch);
 function response(){return {search_parameters:G.requestParams(c),properties:[{name:'Fixture Villa',property_token:'token_fixture',rate_per_night:{extracted_display_price:290000,extracted_before_taxes_fees:290000,extracted_after_taxes_fees:330000},total_rate:{extracted_lowest:1980000}}]};}
-test('Google Hotels requests exact dates, eight adults and KRW, and keeps display price separate from total and tax',()=>{
-  const p=G.requestParams(c);assert.equal(p.adults,8);assert.equal(p.currency,'KRW');assert.equal(p.check_out_date,'2027-09-28');assert(!('rooms'in p));
+test('Google Hotels requests exact dates, two reference adults and KRW, and keeps display price separate from total and tax',()=>{
+  const p=G.requestParams(c);assert.equal(p.adults,2);assert.equal(p.currency,'KRW');assert.equal(p.check_out_date,'2027-09-28');assert(!('rooms'in p));
   const r=G.parseResponse(response(),c);assert.equal(r.price,290000);assert.equal(r.tax,'세금·수수료 별도');assert.equal(r.basis,'nightly');
 });
 test('other hotels, ambiguous names, mismatched guests or response conditions cannot become a price',()=>{
   let data=response();data.properties[0].name='Other Villa';assert.equal(G.parseResponse(data,c).status,'unverified');
   data=response();data.properties.push(data.properties[0]);assert.equal(G.parseResponse(data,c).status,'unverified');
-  data=response();data.search_parameters.adults=2;assert.throws(()=>G.parseResponse(data,c));
-  data=response();data.properties[0].prices=[{num_guests:2,rate_per_night:{extracted_lowest:10000}}];assert.equal(G.parseResponse(data,c).status,'no_offer');
+  data=response();data.search_parameters.adults=6;assert.throws(()=>G.parseResponse(data,c));
+  data=response();data.properties[0].prices=[{num_guests:1,rate_per_night:{extracted_lowest:10000}}];assert.equal(G.parseResponse(data,c).status,'no_offer');
   data=response();data.properties[0].rate_per_night={};assert.equal(G.parseResponse(data,c).status,'no_offer');
-  assert.throws(()=>G.fromWatch({...watch,rooms:4}));
+  assert.throws(()=>G.fromWatch({...watch,rooms:4}));assert.throws(()=>G.fromWatch({...watch,adults:8}));
 });
 test('Google identity, dates and people isolate histories from Agoda and other properties',()=>{
   assert.match(G.key(c),/^google_hotels_v1\|/);
@@ -24,6 +24,17 @@ test('Google identity, dates and people isolate histories from Agoda and other p
   assert.notEqual(G.key({...c,token:'token_one'}),G.key({...c,token:'token_two'}));
   assert.equal(G.fromWatch({...watch,url:G.canonical(c)}).name,c.name);
   assert.equal(G.nameOf('숙소 이름 (Fixture Villa)'),'Fixture Villa');
+});
+test('a Google Hotels link supplies the property key and embedded dates without a typed hotel name',()=>{
+  const imported=G.fromLink('https://www.google.com/travel/hotels/entity/fixture_token/prices?check_in_date=2027-09-22&check_out_date=2027-09-28');
+  assert.equal(imported.token,'fixture_token');assert.equal(imported.adults,2);assert.equal(imported.name,'Google Hotels 숙소');
+  const p=G.requestParams(imported);assert.equal(p.property_token,'fixture_token');assert(!('q'in p));
+  assert.equal(G.parseResponse({search_parameters:p,name:'Actual hotel name',property_token:'fixture_token',rate_per_night:{extracted_lowest:123000}},imported).price,123000);
+  const other=G.parseResponse({search_parameters:p,name:'Other hotel',property_token:'other_token'},imported);assert.equal(other.status,'unverified');
+  const dates=G.decodeDates('CAEaIAoCGgASGhIUCgcI6g8QBxgMEgcI6g8QBxgOGAIyAggBKgkKBToDSU5SGgA');
+  assert.equal(dates.checkin,'2026-07-12');assert.equal(dates.checkout,'2026-07-14');
+  assert.equal(Object.keys(G.decodeDates('malformed')).length,0);
+  assert.throws(()=>G.fromLink('https://google.com.evil.example/travel/hotels/entity/fixture_token'));
 });
 test('Google Hotels UI filters old Agoda quotes and displays the current quote tax basis',()=>{
   const app=vm.createContext({URL,Date,window:{BALI_CONFIG:{},BaliGoogleHotels:G},document:{},localStorage:{getItem(){return null;}},console});

@@ -34,8 +34,11 @@ async function main(){
   const trips=await db('trips?select=id');if(trips.length!==1)throw new Error('Exactly one Bali trip is required');
   const trip=trips[0],watches=await db(`watch_items?trip_id=eq.${trip.id}&kind=eq.stay&select=*`);
   for(const w of watches.filter(w=>w.is_active&&w.provider==='Agoda URL')){
-    const c=G.fromWatch(w),patch={provider:G.PROVIDER,url:G.canonical(c),price_basis:'nightly',target_price:null,amadeus_hotel_id:null};
+    const c=G.fromWatch({...w,adults:2,rooms:1}),patch={provider:G.PROVIDER,url:G.canonical(c),adults:2,rooms:1,price_basis:'nightly',target_price:null,amadeus_hotel_id:null};
     await db('watch_items?id=eq.'+w.id,{method:'PATCH',body:patch});Object.assign(w,patch);
+  }
+  for(const w of watches.filter(w=>w.is_active&&G.managed(w)&&w.adults>6)){
+    await db('watch_items?id=eq.'+w.id,{method:'PATCH',body:{adults:2,rooms:1}});Object.assign(w,{adults:2,rooms:1});
   }
   const candidates=watches.filter(w=>w.is_active&&G.managed(w)&&w.checkin_on>=today);
   const members=await db(`trip_members?trip_id=eq.${trip.id}&select=starts_on,ends_on`);
@@ -54,7 +57,10 @@ async function main(){
     let status='error';
     try{
       const result=await search(c);status=result.status;
-      if(status==='ok')await db('price_quotes',{method:'POST',body:{trip_id:trip.id,watch_id:w.id,price:result.price,price_basis:'nightly',context_key:contextKey,currency:'KRW',provider:G.PROVIDER,observed_at:new Date().toISOString(),summary:`Google Hotels 표시 1박 요금 · ${result.tax} · ${result.source} · ${c.checkin}~${c.checkout} · 성인 ${c.adults}명 · 객실/빌라 1개. 예약 직전 공급처 최종 금액 확인.`}});
+      if(status==='ok'){
+        await db('price_quotes',{method:'POST',body:{trip_id:trip.id,watch_id:w.id,price:result.price,price_basis:'nightly',context_key:contextKey,currency:'KRW',provider:G.PROVIDER,observed_at:new Date().toISOString(),summary:`참고 시세 · Google Hotels 표시 1박 요금 · ${result.tax} · ${result.source} · ${c.checkin}~${c.checkout} · 조회 성인 ${c.adults}명 · 객실/빌라 1개 (8명 전체 예약 금액 아님). 예약 직전 공급처 최종 금액 확인.`}});
+        if(c.token&&w.label==='Google Hotels 숙소'&&result.name)await db('watch_items?id=eq.'+w.id,{method:'PATCH',body:{label:result.name}});
+      }
     }catch(error){errors++;console.error(/^(SerpAPI HTTP|Supabase HTTP|Google Hotels)/.test(error.message)?error.message:'Hotel collection failed');}
     await db('stay_price_checks?id=eq.'+rows[0].id,{method:'PATCH',body:{status,checked_at:new Date().toISOString()}});
     console.log('Google Hotels check: '+status+(status==='ok'?' (nightly observation saved)':''));
