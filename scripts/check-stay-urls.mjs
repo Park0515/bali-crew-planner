@@ -21,6 +21,15 @@ async function readPage(browser,c){
     const response=await page.goto(S.canonical(c),{waitUntil:'domcontentloaded',timeout:60000});
     if([401,403,429].includes(response?.status()))return {status:'blocked'};
     if(!response?.ok())return {status:'error'};
+    // Agoda can override URL currency with the visitor region. Use its public
+    // currency picker, then still require KRW and explicit tax-inclusive prices.
+    const currency=page.getByRole('button',{name:/요금 표시/}).first();
+    await currency.waitFor({state:'visible',timeout:30000}).catch(()=>{});
+    if(await currency.count()&&!/한국\s*원/.test(await currency.getAttribute('aria-label')||'')){
+      await currency.click();
+      await page.getByRole('dialog',{name:'가격 및 통화 선택'}).getByRole('option',{name:'₩ 한국 원',exact:true}).first().click();
+      await page.getByRole('button',{name:'요금 표시(한국 원)',exact:true}).waitFor({state:'visible',timeout:30000});
+    }
     await page.locator('#property-room-grid-root').waitFor({state:'attached',timeout:45000}).catch(()=>{});
     if(await page.locator('#property-room-grid-root').count())await page.locator('#property-room-grid-root').scrollIntoViewIfNeeded();
     await page.waitForFunction(()=>{
