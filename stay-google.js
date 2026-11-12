@@ -23,7 +23,7 @@ function fromLink(value,fallback={}){
   const checkout=p.get('check_out_date')||p.get('checkout')||decoded.checkout||fallback.checkout;
   const name=p.get('q')||fallback.name||'Google Hotels 숙소';
   if(!token&&!p.get('q'))throw new Error('숙소 상세 주소(entity/...)를 복사해 주세요. 단축 공유 주소는 브라우저에서 연 뒤 전체 주소를 사용하세요.');
-  return fromWatch({url:u.href,label:name,checkin_on:checkin,checkout_on:checkout,adults:2,rooms:1});
+  return fromWatch({url:u.href,label:name,checkin_on:checkin,checkout_on:checkout,adults:6,rooms:1});
 }
 function fromWatch(w){
   let url;try{url=new URL(w.url);}catch{}
@@ -32,9 +32,9 @@ function fromWatch(w){
   const token=google?(url.searchParams.get('property_token')||url.pathname.match(/\/entity\/([^/]+)/)?.[1]||''):'';
   if(!name||name.length>200)throw new Error('Google Hotels에 표시된 정확한 숙소명을 입력해 주세요.');
   if(token&&!/^[A-Za-z0-9_-]{5,500}$/.test(token))throw new Error('Google Hotels 숙소 주소를 확인해 주세요.');
-  const checkin=w.checkin_on,checkout=w.checkout_on,adults=Number(w.adults||2),rooms=Number(w.rooms||1);
+  const checkin=w.checkin_on,checkout=w.checkout_on,adults=Number(w.adults||6),rooms=Number(w.rooms||1);
   if(!validDate(checkin)||!validDate(checkout)||checkout<=checkin)throw new Error('체크인·체크아웃 날짜를 확인해 주세요.');
-  if(!Number.isInteger(adults)||adults<1||adults>6||rooms!==1)throw new Error('Google Hotels 조회는 성인 최대 6명, 객실/빌라 1개입니다. 기본 2명 참고 시세를 사용하세요.');
+  if(!Number.isInteger(adults)||adults<1||adults>6||rooms!==1)throw new Error('Google Hotels 조회는 성인 최대 6명, 객실/빌라 1개입니다. 기본 6명 참고 시세를 사용하세요.');
   return {name,token,checkin,checkout,adults,rooms,nights:(Date.parse(checkout)-Date.parse(checkin))/86400000};
 }
 function canonical(c){
