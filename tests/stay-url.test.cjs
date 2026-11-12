@@ -44,15 +44,12 @@ test('a changed date or occupancy creates a different history context',()=>{
   assert.notEqual(S.key(original),S.key(changed));
 });
 
-test('URL import, quote unit isolation and existing flight forms work in the app',()=>{
+test('archived Agoda quote unit isolation works in the app',()=>{
   const nodes=new Map(),node=s=>{if(!nodes.has(s))nodes.set(s,{value:'',innerHTML:'',textContent:'',classList:{toggle(){}}});return nodes.get(s);};
   const form={querySelector:selector=>node(selector)};
   const app=vm.createContext({URL,Date,window:{BALI_CONFIG:{},BaliStay:S},document:{querySelector:s=>s==='#watchForm'?form:node(s),querySelectorAll:()=>[]},localStorage:{getItem(){return null;}},console});
-  const source=fs.readFileSync(path.join(root,'app.js'),'utf8').replace(/init\(\)\.catch\([\s\S]*?\n\}\)\(\);\s*$/,'globalThis.testApi={state,fillStayFromUrl,quotesOf};\n})();');
+  const source=fs.readFileSync(path.join(root,'app.js'),'utf8').replace(/init\(\)\.catch\([\s\S]*?\n\}\)\(\);\s*$/,'globalThis.testApi={state,quotesOf};\n})();');
   vm.runInContext(source,app);
-  node('[name=kind]').value='stay';node('[name=url]').value=link;
-  app.testApi.fillStayFromUrl(true);
-  assert.equal(node('[name=checkin_on]').value,'2027-09-22');assert.equal(node('[name=checkout_on]').value,'2027-09-28');assert.equal(node('[name=adults]').value,8);assert.equal(node('[name=price_basis]').value,'nightly');
   app.testApi.state.data={watches:[{id:'w',url:link,kind:'stay',price_basis:'nightly'}],quotes:[
     {id:'total',watch_id:'w',price:2000000,price_basis:'total'},
     {id:'nightly',watch_id:'w',price:338261,price_basis:'nightly',context_key:S.key(c)},

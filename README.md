@@ -83,7 +83,7 @@ git push -u origin main
 
 ## 4. 선택 사항: 항공·숙소 가격 자동 점검
 
-**숙소 URL 등록 → 공개 페이지의 1박 요금 자동 기록**은 [STAY-URL-SETUP.md](STAY-URL-SETUP.md)를 따릅니다. 현재 Agoda 숙소 상세 주소를 지원하며, Amadeus 키 없이 페이지를 확인합니다. 숙박 총액과 1박 요금을 구분하고, 확인 가능한 세금·수수료 포함 1박 표시 금액만 기록합니다.
+**숙소 가격 추적**은 [GOOGLE-HOTELS-SETUP.md](GOOGLE-HOTELS-SETUP.md)를 따릅니다. Google Hotels·SerpAPI로 같은 숙소·날짜·인원의 1박 표시 요금을 매일 기록하며, 세금 포함 여부와 예약처를 표시합니다. 기존 Agoda 기록과 별도 추이로 관리합니다.
 
 멤버 날짜별 **인천 ↔ 덴파사 직항 왕복 가격 추이**는 [FLIGHT-SETUP.md](FLIGHT-SETUP.md)를 따릅니다. SerpAPI Free의 Google Flights 연동을 사용하며, 별도의 Secrets·`flight-tracking.sql`·`FLIGHT_MONITOR_ENABLED` 설정이 필요합니다. API가 연결되기 전에는 그래프에 실제 가격이 표시되지 않습니다. 아래 Amadeus 설정은 기존 수동 항공 추적 및 호텔 수집용입니다.
 

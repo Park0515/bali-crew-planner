@@ -1,0 +1,32 @@
+name: Google Hotels price monitor
+on:
+  workflow_dispatch:
+    inputs:
+      retry_failed:
+        description: '오늘 API 오류 항목만 재시도 (조회 한도 추가 사용)'
+        type: boolean
+        default: false
+  schedule:
+    - cron: '43 0 * * *'
+permissions:
+  contents: read
+concurrency:
+  group: google-hotels-monitor
+  cancel-in-progress: false
+jobs:
+  collect:
+    if: vars.HOTEL_MONITOR_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Collect Google Hotels prices
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
+          RETRY_FAILED: ${{ github.event.inputs.retry_failed || 'false' }}
+        run: node scripts/check-hotel-prices.mjs

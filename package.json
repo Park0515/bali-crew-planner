@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "node --test tests/login-id.test.cjs tests/single-trip.test.cjs tests/flight-trends.test.cjs tests/stay-url.test.cjs"
-  },
-  "devDependencies": {
-    "playwright": "1.65.0"
+    "test": "node --test tests/login-id.test.cjs tests/single-trip.test.cjs tests/flight-trends.test.cjs tests/stay-url.test.cjs tests/stay-google.test.cjs"
   }
 }

@@ -33,12 +33,13 @@ jobs:
           node --check flight-trends-view.js
           node --check scripts/check-flight-prices.mjs
           node --check stay-url.js
-          node --check scripts/check-stay-urls.mjs
-          node --test tests/login-id.test.cjs tests/single-trip.test.cjs tests/flight-trends.test.cjs tests/stay-url.test.cjs
+          node --check stay-google.js
+          node --check scripts/check-hotel-prices.mjs
+          node --test tests/login-id.test.cjs tests/single-trip.test.cjs tests/flight-trends.test.cjs tests/stay-url.test.cjs tests/stay-google.test.cjs
       - name: Prepare public website files
         run: |
           mkdir _site
-          cp index.html styles.css app.js config.js login-id.js account-helper.html account-helper.js flight-trends.js flight-trends-view.js stay-url.js .nojekyll _site/
+          cp index.html styles.css app.js config.js login-id.js account-helper.html account-helper.js flight-trends.js flight-trends-view.js stay-url.js stay-google.js .nojekyll _site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
