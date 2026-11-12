@@ -57,6 +57,7 @@ async function readPage(browser,c){
       noOffer:/선택하신 날짜에 이용 가능한 객실이 없습니다|선택하신 날짜에는 예약 가능한 객실이 없습니다/.test(body)
     };
     const result=S.extract(snapshot,c);
+    if(result.status==='unverified')console.log('Public offer labels: '+JSON.stringify(snapshot.offers.slice(0,2)));
     const diagnostics=result.status==='unverified'?{reason:result.reason,offerBlocks:snapshot.offers.length,currencyLabel:snapshot.currencyText,checkinPresent:!!snapshot.checkinText,checkoutPresent:!!snapshot.checkoutText,occupancyPresent:!!snapshot.occupancyText,nightlyLabelPresent:/1박당\s*총\s*금액/.test(body),priceSelectors:await page.locator('[data-testid],[data-selenium]').evaluateAll(nodes=>[...new Set(nodes.flatMap(el=>[el.getAttribute('data-testid'),el.getAttribute('data-selenium')]).filter(v=>v&&/price|room-offer/i.test(v)))].slice(0,20))}:null;
     return {...result,diagnostics,title:await page.locator('h1').first().innerText().catch(()=>'')};
   }finally{await context.close();}
