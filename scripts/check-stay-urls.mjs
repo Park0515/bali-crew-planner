@@ -35,6 +35,9 @@ async function readPage(browser,c){
     const inclusive=picker.getByRole('checkbox',{name:'1박당 요금(세금 및 봉사료 포함)',exact:true});
     if(await inclusive.getAttribute('aria-checked')!=='true')await inclusive.click();
     else await picker.getByRole('button',{name:'close',exact:true}).click();
+    // The rate preference reloads the page. The Rooms tab activates its lazy
+    // rate grid; scrolling an empty placeholder alone does not always do so.
+    await page.getByRole('link',{name:'객실',exact:true}).first().click({timeout:30000});
     await page.locator('#property-room-grid-root').waitFor({state:'attached',timeout:45000}).catch(()=>{});
     if(await page.locator('#property-room-grid-root').count())await page.locator('#property-room-grid-root').scrollIntoViewIfNeeded();
     await page.waitForFunction(()=>{
