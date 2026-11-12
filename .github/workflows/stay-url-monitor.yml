@@ -1,6 +1,11 @@
 name: Stay URL price monitor
 on:
   workflow_dispatch:
+    inputs:
+      retry_failed:
+        description: '오늘 오류·요금 검증 실패 항목만 재시도'
+        type: boolean
+        default: false
   schedule:
     - cron: '43 0 * * *'
 permissions:
@@ -27,4 +32,5 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
           STAY_URL_TO_REGISTER: ${{ secrets.STAY_URL_TO_REGISTER }}
+          RETRY_FAILED: ${{ github.event.inputs.retry_failed || 'false' }}
         run: node scripts/check-stay-urls.mjs

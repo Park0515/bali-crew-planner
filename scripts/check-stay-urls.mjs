@@ -40,7 +40,8 @@ async function readPage(browser,c){
       noOffer:/선택하신 날짜에 이용 가능한 객실이 없습니다|선택하신 날짜에는 예약 가능한 객실이 없습니다/.test(body)
     };
     const result=S.extract(snapshot,c);
-    return {...result,title:await page.locator('h1').first().innerText().catch(()=>'')};
+    const diagnostics=result.status==='unverified'?{reason:result.reason,offerBlocks:snapshot.offers.length,currencyLabel:snapshot.currencyText,checkinPresent:!!snapshot.checkinText,checkoutPresent:!!snapshot.checkoutText,occupancyPresent:!!snapshot.occupancyText,nightlyLabelPresent:/1박당\s*총\s*금액/.test(body),priceSelectors:await page.locator('[data-testid],[data-selenium]').evaluateAll(nodes=>[...new Set(nodes.flatMap(el=>[el.getAttribute('data-testid'),el.getAttribute('data-selenium')]).filter(v=>v&&/price|room-offer/i.test(v)))].slice(0,20))}:null;
+    return {...result,diagnostics,title:await page.locator('h1').first().innerText().catch(()=>'')};
   }finally{await context.close();}
 }
 async function main(){
@@ -53,11 +54,12 @@ async function main(){
   let watches=await db(`watch_items?trip_id=eq.${trip.id}&kind=eq.stay&select=*`);
   if(process.env.STAY_URL_TO_REGISTER){
     const c=S.parse(process.env.STAY_URL_TO_REGISTER);
-    const existing=watches.find(w=>{try{return S.key(S.fromWatch(w))===S.key(c);}catch{return false;}});
+    const existing=watches.find(w=>{try{return w.price_basis===S.BASIS&&S.key(S.fromWatch(w))===S.key(c);}catch{return false;}});
     if(!existing){
       await db('watch_items',{method:'POST',body:{trip_id:trip.id,kind:'stay',label:'Agoda 숙소 '+c.propertyId,provider:'Agoda URL',url:S.canonical(c),checkin_on:c.checkin,checkout_on:c.checkout,adults:c.adults,rooms:c.rooms,price_basis:S.BASIS,currency:'KRW',is_active:true}});
       watches=await db(`watch_items?trip_id=eq.${trip.id}&kind=eq.stay&select=*`);
-    }
+    }else if(existing.url!==S.canonical(c))await db('watch_items?id=eq.'+existing.id,{method:'PATCH',body:{url:S.canonical(c)}});
+    watches=await db(`watch_items?trip_id=eq.${trip.id}&kind=eq.stay&select=*`);
   }
   const candidates=watches.filter(w=>w.is_active&&w.price_basis===S.BASIS&&w.checkin_on>=today&&w.url);
   if(candidates.length>10)throw new Error('More than 10 stay pages: review collection scope');
@@ -66,7 +68,11 @@ async function main(){
   try{for(const w of candidates){
     let c;try{c=S.fromWatch(w);}catch{continue;}
     const contextKey=S.key(c);
-    const rows=await db('stay_price_checks?on_conflict=watch_id,context_key,checked_on',{method:'POST',prefer:'resolution=ignore-duplicates,return=representation',body:{trip_id:trip.id,watch_id:w.id,context_key:contextKey,checked_on:today}});
+    let rows=await db('stay_price_checks?on_conflict=watch_id,context_key,checked_on',{method:'POST',prefer:'resolution=ignore-duplicates,return=representation',body:{trip_id:trip.id,watch_id:w.id,context_key:contextKey,checked_on:today}});
+    if(!rows?.length&&process.env.RETRY_FAILED==='true'){
+      const previous=await db(`stay_price_checks?watch_id=eq.${w.id}&context_key=eq.${encodeURIComponent(contextKey)}&checked_on=eq.${today}&status=in.(error,unverified)&select=id`);
+      if(previous.length)rows=await db(`stay_price_checks?id=eq.${previous[0].id}&status=in.(error,unverified)`,{method:'PATCH',prefer:'return=representation',body:{status:'pending'}});
+    }
     if(!rows?.length){console.log(`stay ${w.id}: already checked today`);continue;}
     let result;
     try{result=await readPage(browser,c);}catch{result={status:'error'};}
@@ -76,6 +82,7 @@ async function main(){
     }
     await db('stay_price_checks?id=eq.'+rows[0].id,{method:'PATCH',body:{status:result.status,checked_at:new Date().toISOString()}});
     console.log(`stay ${w.id}: ${result.status}${result.status==='ok'?' (tax-inclusive nightly KRW saved)':''}`);
+    if(result.diagnostics)console.log('Visible page checks: '+JSON.stringify(result.diagnostics));
     if(result.status==='error')failures++;
   }}finally{await browser.close();}
   if(failures)process.exitCode=1;

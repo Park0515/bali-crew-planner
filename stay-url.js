@@ -13,13 +13,15 @@ function parse(value){
   if(Number(p.get('children')||0)!==0)throw new Error('현재 URL 자동 조회는 성인만 포함한 조건을 지원합니다.');
   if(p.get('currencyCode')&&p.get('currencyCode')!=='KRW')throw new Error('원화(KRW)로 설정한 주소를 입력해 주세요.');
   const checkout=new Date(Date.parse(checkin+'T00:00:00Z')+nights*86400000).toISOString().slice(0,10);
-  return {propertyId,checkin,checkout,nights,adults,rooms,basis:BASIS};
+  const countryId=p.get('countryId');if(countryId&&!/^\d{1,6}$/.test(countryId))throw new Error('국가 정보 값을 확인해 주세요.');
+  return {propertyId,countryId,checkin,checkout,nights,adults,rooms,basis:BASIS};
 }
 function canonical(c){
   if(!validDate(c.checkin)||!validDate(c.checkout)||c.checkout<=c.checkin)throw new Error('체크인·체크아웃 날짜를 확인해 주세요.');
   const nights=(Date.parse(c.checkout)-Date.parse(c.checkin))/86400000;
   const url=new URL('https://www.agoda.com/ko-kr/accom/property');
   for(const [k,v] of Object.entries({propertyId:c.propertyId,checkIn:c.checkin,los:nights,adults:c.adults,children:0,rooms:c.rooms,currencyCode:'KRW',finalPriceView:1,isShowMobileAppPrice:false}))url.searchParams.set(k,String(v));
+  if(c.countryId)url.searchParams.set('countryId',c.countryId);
   parse(url.href);return url.href;
 }
 function fromWatch(w){const c=parse(w.url);if(w.checkin_on)c.checkin=w.checkin_on;if(w.checkout_on)c.checkout=w.checkout_on;if(w.adults)c.adults=Number(w.adults);if(w.rooms)c.rooms=Number(w.rooms);return parse(canonical(c));}
@@ -27,10 +29,11 @@ const key=c=>['agoda',c.propertyId,c.checkin,c.checkout,c.adults,c.rooms,'KRW',B
 function extract(snapshot,c){
   const compact=s=>String(s||'').replace(/\s+/g,'');
   if(snapshot.blocked)return {status:'blocked'};
-  if(snapshot.propertyId!==c.propertyId)return {status:'unverified'};
-  if(!/한국\s*원|KRW/.test(snapshot.currencyText||''))return {status:'unverified'};
+  if(snapshot.propertyId!==c.propertyId)return {status:'unverified',reason:'property_mismatch'};
+  if(!/한국\s*원|KRW/.test(snapshot.currencyText||''))return {status:'unverified',reason:'currency_unconfirmed'};
   const dateLabel=d=>{const [y,m,day]=d.split('-').map(Number);return `${y}년${m}월${day}일`;};
-  if(!compact(snapshot.checkinText).includes(dateLabel(c.checkin))||!compact(snapshot.checkoutText).includes(dateLabel(c.checkout))||!compact(snapshot.occupancyText).includes(`성인${c.adults}명`)||!compact(snapshot.occupancyText).includes(`객실${c.rooms}개`))return {status:'unverified'};
+  if(!compact(snapshot.checkinText).includes(dateLabel(c.checkin))||!compact(snapshot.checkoutText).includes(dateLabel(c.checkout)))return {status:'unverified',reason:'dates_unconfirmed'};
+  if(!compact(snapshot.occupancyText).includes(`성인${c.adults}명`)||!compact(snapshot.occupancyText).includes(`객실${c.rooms}개`))return {status:'unverified',reason:'occupancy_unconfirmed'};
   const prices=[];
   for(const text of snapshot.offers||[]){
     // Only the explicit tax-inclusive per-night amount; ignore base, crossed-out and coupon values.
@@ -39,7 +42,7 @@ function extract(snapshot,c){
     const amount=match?Number(match[1].replaceAll(',','')):NaN;
     if(Number.isSafeInteger(amount)&&amount>0)prices.push(amount);
   }
-  if(!prices.length)return {status:snapshot.noOffer?'no_offer':'unverified'};
+  if(!prices.length)return {status:snapshot.noOffer?'no_offer':'unverified',reason:'nightly_tax_inclusive_price_unconfirmed'};
   return {status:'ok',price:Math.min(...prices),basis:BASIS,provider:PROVIDER};
 }
 globalThis.BaliStay={BASIS,PROVIDER,parse,canonical,fromWatch,key,extract};
