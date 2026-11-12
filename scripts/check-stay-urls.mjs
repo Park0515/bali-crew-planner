@@ -57,7 +57,7 @@ async function readPage(browser,c){
       noOffer:/선택하신 날짜에 이용 가능한 객실이 없습니다|선택하신 날짜에는 예약 가능한 객실이 없습니다/.test(body)
     };
     const result=S.extract(snapshot,c);
-    if(result.status==='unverified')console.log('Public offer labels: '+JSON.stringify(snapshot.offers.slice(0,2)));
+    if(result.status==='unverified'||process.env.DIAGNOSTIC_ONLY==='true')console.log('Public offer labels: '+JSON.stringify(snapshot.offers.slice(0,2)));
     const diagnostics=result.status==='unverified'?{reason:result.reason,offerBlocks:snapshot.offers.length,currencyLabel:snapshot.currencyText,checkinPresent:!!snapshot.checkinText,checkoutPresent:!!snapshot.checkoutText,occupancyPresent:!!snapshot.occupancyText,nightlyLabelPresent:/1박당\s*총\s*금액/.test(body),priceSelectors:await page.locator('[data-testid],[data-selenium]').evaluateAll(nodes=>[...new Set(nodes.flatMap(el=>[el.getAttribute('data-testid'),el.getAttribute('data-selenium')]).filter(v=>v&&/price|room-offer/i.test(v)))].slice(0,20))}:null;
     return {...result,diagnostics,title:await page.locator('h1').first().innerText().catch(()=>'')};
   }finally{await context.close();}
@@ -70,7 +70,7 @@ async function main(){
   const trips=await db('trips?select=id');if(trips.length!==1)throw new Error('Exactly one Bali trip is required');
   const trip=trips[0];
   let watches=await db(`watch_items?trip_id=eq.${trip.id}&kind=eq.stay&select=*`);
-  if(process.env.STAY_URL_TO_REGISTER){
+  if(process.env.STAY_URL_TO_REGISTER&&process.env.DIAGNOSTIC_ONLY!=='true'){
     const c=S.parse(process.env.STAY_URL_TO_REGISTER);
     const existing=watches.find(w=>{try{return w.price_basis===S.BASIS&&S.key(S.fromWatch(w))===S.key(c);}catch{return false;}});
     if(!existing){
@@ -86,6 +86,11 @@ async function main(){
   try{for(const w of candidates){
     let c;try{c=S.fromWatch(w);}catch{continue;}
     const contextKey=S.key(c);
+    if(process.env.DIAGNOSTIC_ONLY==='true'){
+      const result=await readPage(browser,c);
+      console.log('Read-only current rate: '+JSON.stringify({status:result.status,price:result.price,basis:result.basis}));
+      continue;
+    }
     let rows=await db('stay_price_checks?on_conflict=watch_id,context_key,checked_on',{method:'POST',prefer:'resolution=ignore-duplicates,return=representation',body:{trip_id:trip.id,watch_id:w.id,context_key:contextKey,checked_on:today}});
     if(!rows?.length&&process.env.RETRY_FAILED==='true'){
       const previous=await db(`stay_price_checks?watch_id=eq.${w.id}&context_key=eq.${encodeURIComponent(contextKey)}&checked_on=eq.${today}&status=in.(error,unverified)&select=id`);
